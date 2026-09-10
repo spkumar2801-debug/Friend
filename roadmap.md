@@ -1,0 +1,5 @@
+- [x] Fix Home feed data-loading error
+- [x] Fix Profile page data-loading error
+- [x] Fix Explore/Reels data loading and navigation label
+- [x] Fix Messages data-loading error
+- [x] Diagnose and fix Google sign-in
