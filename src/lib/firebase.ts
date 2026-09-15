@@ -17,7 +17,11 @@ export function hasFirebaseApiKey() {
 
 const firebaseConfig = {
   get apiKey() {
-    return runtimeApiKey ?? env["VITE_FIREBASE_API_KEY"] ?? "";
+    return (
+      runtimeApiKey ??
+      env["VITE_FIREBASE_API_KEY"] ??
+      "AIzaSyAgGmqGfET8eKY_TLLE1z3Ml5sWhNXwc0"
+    );
   },
   authDomain: env["VITE_FIREBASE_AUTH_DOMAIN"] ?? "friend-7b157.firebaseapp.com",
   projectId: env["VITE_FIREBASE_PROJECT_ID"] ?? "friend-7b157",

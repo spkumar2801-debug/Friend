@@ -52,30 +52,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    return onAuthStateChanged(auth, async (next) => {
-      setUser(next);
-      if (next) {
-        let loaded = await getProfile(next.uid);
-        if (!loaded) {
-          // First Google sign-in: build a Friend profile automatically.
-          const username = await generateUsername(
-            next.email?.split("@")[0] ?? next.displayName ?? "friend",
-          );
-          await createProfile({
-            uid: next.uid,
-            username,
-            displayName: next.displayName || username,
-            photoURL: next.photoURL ?? null,
-          });
-          loaded = await getProfile(next.uid);
+    let unsubscribe: (() => void) | undefined;
+    try {
+      const auth = getFirebaseAuth();
+      unsubscribe = onAuthStateChanged(auth, async (next) => {
+        setUser(next);
+        if (next) {
+          try {
+            let loaded = await getProfile(next.uid);
+            if (!loaded) {
+              // First Google sign-in: build a Friend profile automatically.
+              const username = await generateUsername(
+                next.email?.split("@")[0] ?? next.displayName ?? "friend",
+              );
+              await createProfile({
+                uid: next.uid,
+                username,
+                displayName: next.displayName || username,
+                photoURL: next.photoURL ?? null,
+              });
+              loaded = await getProfile(next.uid);
+            }
+            setProfile(loaded);
+          } catch (e) {
+            console.error("Error loading user profile:", e);
+          }
+        } else {
+          setProfile(null);
         }
-        setProfile(loaded);
-      } else {
-        setProfile(null);
-      }
+        setLoading(false);
+      });
+    } catch (err) {
+      console.error("Firebase auth initialization error:", err);
       setLoading(false);
-    });
+    }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const refreshProfile = useCallback(async () => {
