@@ -41,6 +41,7 @@ const label: Record<AppNotification["type"], string> = {
   follow_request: "asked to follow you",
   follow_accepted: "accepted your follow request",
   like: "liked your post",
+  repost: "reposted your post",
   comment: "commented on your post",
   reply: "replied to your comment",
   mention: "mentioned you",

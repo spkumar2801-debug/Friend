@@ -56,6 +56,7 @@ export interface Post {
   location: string | null;
   likeCount: number;
   commentCount: number;
+  repostCount?: number;
   isPrivate: boolean;
   moderationStatus: "pending" | "approved" | "flagged" | "removed";
   createdAt: Timestamp | null;
@@ -87,6 +88,7 @@ export type NotificationType =
   | "follow_request"
   | "follow_accepted"
   | "like"
+  | "repost"
   | "comment"
   | "reply"
   | "mention"

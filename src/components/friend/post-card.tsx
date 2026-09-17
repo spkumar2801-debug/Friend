@@ -7,6 +7,7 @@ import {
   Link2,
   MessageCircle,
   MoreHorizontal,
+  Repeat2,
   Flag,
   Send,
   Trash2,
@@ -16,11 +17,13 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
 import {
   deletePost,
+  isReposted,
   isSaved,
   likedByMe,
   reportContent,
   toDate,
   toggleLike,
+  toggleRepost,
   toggleSave,
 } from "@/lib/services";
 import { friendlyError } from "@/lib/errors";

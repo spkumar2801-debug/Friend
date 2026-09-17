@@ -54,14 +54,15 @@ export function uploadToCloudinary(
       }
       try {
         const data = JSON.parse(xhr.responseText);
-        resolve({
+        const res: UploadResult = {
           url: data.secure_url,
           publicId: data.public_id,
           resourceType: data.resource_type === "video" ? "video" : "image",
-          width: data.width,
-          height: data.height,
-          duration: data.duration,
-        });
+        };
+        if (typeof data.width === "number") res.width = data.width;
+        if (typeof data.height === "number") res.height = data.height;
+        if (typeof data.duration === "number") res.duration = data.duration;
+        resolve(res);
       } catch {
         reject(new Error("Upload response could not be read."));
       }

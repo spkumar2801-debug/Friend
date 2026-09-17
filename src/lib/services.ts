@@ -86,11 +86,29 @@ export function toDate(ts: unknown): Date | null {
   return null;
 }
 
+/** Deeply removes undefined properties so Firestore never throws unsupported field value error. */
+export function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) return null as unknown as T;
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeForFirestore(item)) as unknown as T;
+  }
+  if (typeof data === "object" && !(data instanceof Date) && !(data instanceof Timestamp)) {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned as unknown as T;
+  }
+  return data;
+}
+
 export function snapshotOf(profile: UserProfile): AuthorSnapshot {
   return {
     uid: profile.uid,
-    username: profile.username,
-    displayName: profile.displayName,
+    username: profile.username ?? "",
+    displayName: profile.displayName ?? profile.username ?? "",
     photoURL: profile.photoURL ?? null,
   };
 }
@@ -342,22 +360,38 @@ export async function createPost(params: {
   location?: string | null;
 }) {
   const db = getDb();
-  const hashtags = extractHashtags(params.caption);
-  const mentions = extractMentions(params.caption);
-  const ref = await addDoc(collection(db, "posts"), {
+  const hashtags = extractHashtags(params.caption || "");
+  const mentions = extractMentions(params.caption || "");
+  const cleanMedia = (params.media || []).map((m) => {
+    const item: PostMedia = {
+      url: m.url,
+      publicId: m.publicId,
+      resourceType: m.resourceType,
+      alt: m.alt ?? "",
+    };
+    if (typeof m.width === "number") item.width = m.width;
+    if (typeof m.height === "number") item.height = m.height;
+    if (typeof m.duration === "number") item.duration = m.duration;
+    return item;
+  });
+
+  const postData = sanitizeForFirestore({
     authorId: params.author.uid,
     author: snapshotOf(params.author),
-    media: params.media,
-    caption: params.caption.slice(0, 2200),
+    media: cleanMedia,
+    caption: (params.caption || "").slice(0, 2200),
     hashtags,
     mentions,
     location: params.location?.slice(0, 80) ?? null,
     likeCount: 0,
     commentCount: 0,
-    isPrivate: params.author.isPrivate,
+    repostCount: 0,
+    isPrivate: Boolean(params.author.isPrivate),
     moderationStatus: "approved",
     createdAt: serverTimestamp(),
   });
+
+  const ref = await addDoc(collection(db, "posts"), postData);
   await updateDoc(doc(db, "users", params.author.uid), { postCount: increment(1) });
   await Promise.all(
     hashtags.map((tag) =>
@@ -477,14 +511,17 @@ export async function addComment(params: {
   parentId?: string | null;
 }) {
   const db = getDb();
-  const ref = await addDoc(collection(db, "posts", params.post.id, "comments"), {
-    authorId: params.author.uid,
-    author: snapshotOf(params.author),
-    text: params.text.slice(0, 1000),
-    parentId: params.parentId ?? null,
-    likeCount: 0,
-    createdAt: serverTimestamp(),
-  });
+  const ref = await addDoc(
+    collection(db, "posts", params.post.id, "comments"),
+    sanitizeForFirestore({
+      authorId: params.author.uid,
+      author: snapshotOf(params.author),
+      text: params.text.slice(0, 1000),
+      parentId: params.parentId ?? null,
+      likeCount: 0,
+      createdAt: serverTimestamp(),
+    }),
+  );
   await updateDoc(doc(db, "posts", params.post.id), { commentCount: increment(1) });
   if (params.post.authorId !== params.author.uid) {
     await notify({
@@ -548,18 +585,78 @@ export async function savedPosts(uid: string, max = 24): Promise<Post[]> {
   return posts.filter((p): p is Post => Boolean(p));
 }
 
+/* ---------------------------------------------------------------- reposts */
+
+export async function isReposted(uid: string, postId: string) {
+  const snap = await getDoc(doc(getDb(), "users", uid, "reposts", postId));
+  return snap.exists();
+}
+
+export async function toggleRepost(
+  uid: string,
+  postId: string,
+  repost: boolean,
+  post?: Post,
+  actor?: UserProfile,
+) {
+  const db = getDb();
+  const ref = doc(db, "users", uid, "reposts", postId);
+  const postRef = doc(db, "posts", postId);
+  if (repost) {
+    await setDoc(ref, { postId, createdAt: serverTimestamp() });
+    try {
+      await updateDoc(postRef, { repostCount: increment(1) });
+    } catch {
+      // ignore
+    }
+    if (post && actor && post.authorId !== actor.uid) {
+      await notify({
+        userId: post.authorId,
+        actor: snapshotOf(actor),
+        type: "repost",
+        postId: post.id,
+      });
+    }
+  } else {
+    await deleteDoc(ref);
+    try {
+      await updateDoc(postRef, { repostCount: increment(-1) });
+    } catch {
+      // ignore
+    }
+  }
+}
+
+export async function repostedPosts(uid: string, max = 24): Promise<Post[]> {
+  const res = await getDocs(
+    query(collection(getDb(), "users", uid, "reposts"), orderBy("createdAt", "desc"), qLimit(max)),
+  );
+  const posts = await Promise.all(res.docs.map((d) => getPost(d.id)));
+  return posts.filter((p): p is Post => Boolean(p));
+}
+
 /* ---------------------------------------------------------------- stories */
 
 export async function createStory(author: UserProfile, media: PostMedia) {
   const expiresAt = Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000);
-  await addDoc(collection(getDb(), "stories"), {
+  const cleanMedia: PostMedia = {
+    url: media.url,
+    publicId: media.publicId,
+    resourceType: media.resourceType,
+    alt: media.alt ?? "",
+  };
+  if (typeof media.width === "number") cleanMedia.width = media.width;
+  if (typeof media.height === "number") cleanMedia.height = media.height;
+  if (typeof media.duration === "number") cleanMedia.duration = media.duration;
+
+  await addDoc(collection(getDb(), "stories"), sanitizeForFirestore({
     authorId: author.uid,
     author: snapshotOf(author),
-    media,
+    media: cleanMedia,
     viewers: [],
     createdAt: serverTimestamp(),
     expiresAt,
-  });
+  }));
 }
 
 export async function activeStories(authorIds: string[]): Promise<Story[]> {
@@ -611,16 +708,19 @@ export async function notify(params: {
 }) {
   if (params.userId === params.actor.uid) return;
   try {
-    await addDoc(collection(getDb(), "notifications"), {
-      userId: params.userId,
-      actorId: params.actor.uid,
-      actor: params.actor,
-      type: params.type,
-      postId: params.postId ?? null,
-      preview: params.preview ?? null,
-      read: false,
-      createdAt: serverTimestamp(),
-    });
+    await addDoc(
+      collection(getDb(), "notifications"),
+      sanitizeForFirestore({
+        userId: params.userId,
+        actorId: params.actor.uid,
+        actor: params.actor,
+        type: params.type,
+        postId: params.postId ?? null,
+        preview: params.preview ?? null,
+        read: false,
+        createdAt: serverTimestamp(),
+      }),
+    );
   } catch {
     /* notifications are best-effort and must never break the main action */
   }

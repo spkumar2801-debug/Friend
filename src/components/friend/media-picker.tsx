@@ -39,7 +39,16 @@ export function MediaPicker({
         const result = await uploadToCloudinary(file, (pct) =>
           setProgress(Math.round(((i + pct / 100) / chosen.length) * 100)),
         );
-        uploaded.push({ ...result, alt: "" });
+        const item: PostMedia = {
+          url: result.url,
+          publicId: result.publicId,
+          resourceType: result.resourceType,
+          alt: "",
+        };
+        if (typeof result.width === "number") item.width = result.width;
+        if (typeof result.height === "number") item.height = result.height;
+        if (typeof result.duration === "number") item.duration = result.duration;
+        uploaded.push(item);
       }
       onChange([...media, ...uploaded]);
     } catch (e) {

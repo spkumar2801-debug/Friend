@@ -12,7 +12,7 @@ export function setFirebaseApiKey(key: string) {
 }
 
 export function hasFirebaseApiKey() {
-  return Boolean(runtimeApiKey);
+  return Boolean(runtimeApiKey || env["VITE_FIREBASE_API_KEY"] || firebaseConfig.apiKey);
 }
 
 const firebaseConfig = {
@@ -20,14 +20,14 @@ const firebaseConfig = {
     return (
       runtimeApiKey ??
       env["VITE_FIREBASE_API_KEY"] ??
-      "AIzaSyAgGmqGfET8eKY_TLLE1z3Ml5sWhNXwc0"
+      "AIzaSyAgG2mqGfET8eKY_TLLE1z3Ml5sWhNXwc0"
     );
   },
   authDomain: env["VITE_FIREBASE_AUTH_DOMAIN"] ?? "friend-7b157.firebaseapp.com",
   projectId: env["VITE_FIREBASE_PROJECT_ID"] ?? "friend-7b157",
   storageBucket: env["VITE_FIREBASE_STORAGE_BUCKET"] ?? "friend-7b157.firebasestorage.app",
   messagingSenderId: env["VITE_FIREBASE_MESSAGING_SENDER_ID"] ?? "56217805650",
-  appId: env["VITE_FIREBASE_APP_ID"] ?? "1:56217805650:web:2068b72ce7f7e7aae4108",
+  appId: env["VITE_FIREBASE_APP_ID"] ?? "1:56217805650:web:2068b72ce7f7e7aae4108b",
   measurementId: env["VITE_FIREBASE_MEASUREMENT_ID"] ?? "G-92CHBRTL5L",
 };
 
