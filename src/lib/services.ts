@@ -31,6 +31,7 @@ import type {
   Conversation,
   Follow,
   Message,
+  MessageAttachment,
   Post,
   PostMedia,
   Story,
@@ -416,6 +417,18 @@ export async function deletePost(post: Post) {
   batch.delete(doc(db, "posts", post.id));
   batch.update(doc(db, "users", post.authorId), { postCount: increment(-1) });
   await batch.commit();
+}
+
+export async function updatePostCaption(postId: string, caption: string) {
+  const db = getDb();
+  const hashtags = extractHashtags(caption || "");
+  const mentions = extractMentions(caption || "");
+  await updateDoc(doc(db, "posts", postId), {
+    caption: (caption || "").slice(0, 2200),
+    hashtags,
+    mentions,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function getPost(id: string): Promise<Post | null> {
@@ -826,19 +839,46 @@ export async function sendMessage(params: {
   recipientId: string;
   text: string;
   media?: PostMedia | null;
+  attachment?: MessageAttachment | null;
 }) {
   const db = getDb();
   const text = params.text.trim().slice(0, 2000);
-  if (!text && !params.media) return;
-  await addDoc(collection(db, "conversations", params.conversationId, "messages"), {
-    senderId: params.sender.uid,
-    text,
-    media: params.media ?? null,
-    readBy: [params.sender.uid],
-    createdAt: serverTimestamp(),
-  });
+  if (!text && !params.media && !params.attachment) return;
+  const attachment = params.attachment ?? null;
+  const media =
+    params.media ??
+    (attachment && (attachment.resourceType === "image" || attachment.resourceType === "video")
+      ? {
+          url: attachment.url,
+          publicId: attachment.publicId || "",
+          resourceType: attachment.resourceType,
+          width: attachment.width,
+          height: attachment.height,
+          duration: attachment.duration,
+        }
+      : null);
+
+  await addDoc(
+    collection(db, "conversations", params.conversationId, "messages"),
+    sanitizeForFirestore({
+      senderId: params.sender.uid,
+      text,
+      media,
+      attachment,
+      readBy: [params.sender.uid],
+      createdAt: serverTimestamp(),
+    }),
+  );
+  const fallbackLabel = attachment
+    ? attachment.resourceType === "pdf"
+      ? "Sent a PDF document"
+      : attachment.resourceType === "audio"
+        ? "Sent an audio message"
+        : "Sent an attachment"
+    : "Sent an attachment";
+
   await updateDoc(doc(db, "conversations", params.conversationId), {
-    lastMessage: text || "Sent an attachment",
+    lastMessage: text || fallbackLabel,
     lastSenderId: params.sender.uid,
     updatedAt: serverTimestamp(),
     [`unread.${params.recipientId}`]: increment(1),
@@ -847,7 +887,7 @@ export async function sendMessage(params: {
     userId: params.recipientId,
     actor: snapshotOf(params.sender),
     type: "message",
-    preview: text.slice(0, 100),
+    preview: (text || fallbackLabel).slice(0, 100),
   });
 }
 

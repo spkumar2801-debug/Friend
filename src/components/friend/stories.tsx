@@ -198,12 +198,14 @@ function StoryViewer({ group, onClose }: { group: Group; onClose: () => void }) 
       </div>
 
       <div
-        className="relative flex-1"
+        className="relative flex flex-1 items-center justify-center overflow-hidden"
         onPointerDown={() => setPaused(true)}
         onPointerUp={() => setPaused(false)}
         onPointerCancel={() => setPaused(false)}
       >
-        <MediaItem media={story.media} alt={`Story by ${group.username}`} fit="contain" />
+        <div className="relative flex h-full w-full items-center justify-center">
+          <MediaItem media={story.media} alt={`Story by ${group.username}`} fit="contain" />
+        </div>
         <button
           type="button"
           aria-label="Previous story"

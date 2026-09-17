@@ -6,6 +6,38 @@ import { Progress } from "@/components/ui/progress";
 import { uploadToCloudinary, validateFile, img } from "@/lib/cloudinary";
 import type { PostMedia } from "@/types";
 
+async function getMediaDimensions(file: File): Promise<{ width?: number; height?: number }> {
+  return new Promise((resolve) => {
+    if (file.type.startsWith("image/")) {
+      const imgEl = new Image();
+      const url = URL.createObjectURL(file);
+      imgEl.onload = () => {
+        resolve({ width: imgEl.naturalWidth, height: imgEl.naturalHeight });
+        URL.revokeObjectURL(url);
+      };
+      imgEl.onerror = () => {
+        resolve({});
+        URL.revokeObjectURL(url);
+      };
+      imgEl.src = url;
+    } else if (file.type.startsWith("video/")) {
+      const vidEl = document.createElement("video");
+      const url = URL.createObjectURL(file);
+      vidEl.onloadedmetadata = () => {
+        resolve({ width: vidEl.videoWidth, height: vidEl.videoHeight });
+        URL.revokeObjectURL(url);
+      };
+      vidEl.onerror = () => {
+        resolve({});
+        URL.revokeObjectURL(url);
+      };
+      vidEl.src = url;
+    } else {
+      resolve({});
+    }
+  });
+}
+
 export function MediaPicker({
   media,
   onChange,
@@ -36,17 +68,22 @@ export function MediaPicker({
     try {
       for (let i = 0; i < chosen.length; i++) {
         const file = chosen[i]!;
-        const result = await uploadToCloudinary(file, (pct) =>
-          setProgress(Math.round(((i + pct / 100) / chosen.length) * 100)),
-        );
+        const [localDims, result] = await Promise.all([
+          getMediaDimensions(file),
+          uploadToCloudinary(file, (pct) =>
+            setProgress(Math.round(((i + pct / 100) / chosen.length) * 100)),
+          ),
+        ]);
         const item: PostMedia = {
           url: result.url,
           publicId: result.publicId,
           resourceType: result.resourceType,
           alt: "",
         };
-        if (typeof result.width === "number") item.width = result.width;
-        if (typeof result.height === "number") item.height = result.height;
+        const width = typeof result.width === "number" ? result.width : localDims.width;
+        const height = typeof result.height === "number" ? result.height : localDims.height;
+        if (typeof width === "number") item.width = width;
+        if (typeof height === "number") item.height = height;
         if (typeof result.duration === "number") item.duration = result.duration;
         uploaded.push(item);
       }

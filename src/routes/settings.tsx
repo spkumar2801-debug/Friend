@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Loader2, LogOut } from "lucide-react";
+import { Bookmark, ChevronRight, Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,14 +276,36 @@ function SettingsPage() {
 
       <Separator />
 
+      <section aria-labelledby="saved-heading" className="space-y-3">
+        <h2 id="saved-heading" className="text-sm font-semibold text-muted-foreground">
+          Saved
+        </h2>
+        <Link
+          to="/saved"
+          className="flex items-center justify-between rounded-xl border border-border bg-surface p-3.5 transition-colors hover:bg-secondary/60"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Bookmark className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Saved posts</p>
+              <p className="text-xs text-muted-foreground">
+                Browse photos, videos, and reels you've kept
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+        </Link>
+      </section>
+
+      <Separator />
+
       <section aria-labelledby="account-heading" className="space-y-3">
         <h2 id="account-heading" className="text-sm font-semibold text-muted-foreground">
           Account
         </h2>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="secondary" size="sm">
-            <Link to="/saved">Saved posts</Link>
-          </Button>
           <Button asChild variant="secondary" size="sm">
             <Link to="/forgot-password">Change password</Link>
           </Button>

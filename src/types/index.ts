@@ -116,12 +116,24 @@ export interface Conversation {
   updatedAt: Timestamp | null;
 }
 
+export interface MessageAttachment {
+  url: string;
+  publicId?: string | undefined;
+  resourceType: "image" | "video" | "audio" | "pdf";
+  fileName?: string | undefined;
+  fileSize?: number | undefined;
+  width?: number | undefined;
+  height?: number | undefined;
+  duration?: number | undefined;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
   senderId: string;
   text: string;
   media: PostMedia | null;
+  attachment?: MessageAttachment | null;
   readBy: string[];
   createdAt: Timestamp | null;
 }

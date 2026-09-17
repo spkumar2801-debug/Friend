@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Grid3x3, Lock, Play, Settings, Video } from "lucide-react";
+import { Grid3x3, Lock, Play, Repeat2, Settings, Video } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,7 @@ import {
   getProfileByUsername,
   openConversation,
   reportContent,
+  repostedPosts,
   userPosts,
   type Cursor,
 } from "@/lib/services";
@@ -51,6 +52,8 @@ function ProfilePage() {
   const [done, setDone] = useState(false);
   const [visible, setVisible] = useState(true);
   const [tab, setTab] = useState("posts");
+  const [reposts, setReposts] = useState<Post[]>([]);
+  const [loadingReposts, setLoadingReposts] = useState(false);
   const [listKind, setListKind] = useState<FollowListKind | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +89,16 @@ function ProfilePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (tab === "reposts" && user && visible) {
+      setLoadingReposts(true);
+      void repostedPosts(user.uid)
+        .then(setReposts)
+        .catch(() => undefined)
+        .finally(() => setLoadingReposts(false));
+    }
+  }, [tab, user, visible]);
 
   const more = async () => {
     if (!user) return;
@@ -256,20 +269,52 @@ function ProfilePage() {
               <TabsTrigger value="videos">
                 <Video className="mr-1.5 h-4 w-4" aria-hidden="true" /> Videos
               </TabsTrigger>
-              {isMe && <TabsTrigger value="saved">Saved</TabsTrigger>}
+              <TabsTrigger value="reposts">
+                <Repeat2 className="mr-1.5 h-4 w-4" aria-hidden="true" /> Reposts
+              </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          {tab === "saved" ? (
-            <EmptyState
-              title="Your saved posts live here"
-              description="Open the saved collection to browse everything you've kept."
-              action={
-                <Button asChild size="sm" variant="secondary">
-                  <Link to="/saved">Open saved</Link>
-                </Button>
-              }
-            />
+          {tab === "reposts" ? (
+            loadingReposts ? (
+              <GridSkeleton count={6} />
+            ) : reposts.length === 0 ? (
+              <EmptyState
+                icon={<Repeat2 className="h-5 w-5" aria-hidden="true" />}
+                title="No reposts yet"
+                description={
+                  isMe
+                    ? "Posts you repost will appear on your profile."
+                    : `@${user.username} hasn't reposted any posts yet.`
+                }
+              />
+            ) : (
+              <ul className="grid grid-cols-3 gap-1 sm:gap-2">
+                {reposts.map((post) => (
+                  <li key={post.id}>
+                    <Link
+                      to="/post/$postId"
+                      params={{ postId: post.id }}
+                      className="relative block aspect-square overflow-hidden rounded-md bg-secondary"
+                    >
+                      <img
+                        src={
+                          post.media[0]?.resourceType === "video"
+                            ? img.poster(post.media[0]?.url)
+                            : img.thumb(post.media[0]?.url)
+                        }
+                        alt={post.caption.slice(0, 80) || `Repost by ${user.username}`}
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                      />
+                      {post.media[0]?.resourceType === "video" && (
+                        <Play className="absolute right-2 top-2 h-4 w-4 text-white" aria-hidden="true" />
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )
           ) : shown.length === 0 ? (
             <EmptyState
               icon={<Grid3x3 className="h-5 w-5" aria-hidden="true" />}
