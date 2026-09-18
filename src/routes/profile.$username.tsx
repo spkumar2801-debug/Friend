@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Grid3x3, Lock, Play, Repeat2, Settings, Video } from "lucide-react";
+import { Grid3x3, Heart, Lock, MessageCircle, Play, Repeat2, Settings, Video } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,6 +9,7 @@ import { UserAvatar } from "@/components/friend/user-avatar";
 import { FollowButton } from "@/components/friend/follow-button";
 import { FollowListModal, type FollowListKind } from "@/components/friend/follow-list";
 import { EmptyState, ErrorState, GridSkeleton } from "@/components/friend/states";
+import { RelativeTime } from "@/components/friend/relative-time";
 import { useAuth } from "@/context/auth";
 import {
   blockUser,
@@ -18,6 +19,7 @@ import {
   reportContent,
   repostedPosts,
   userPosts,
+  toDate,
   type Cursor,
 } from "@/lib/services";
 import { friendlyError } from "@/lib/errors";
@@ -295,7 +297,7 @@ function ProfilePage() {
                     <Link
                       to="/post/$postId"
                       params={{ postId: post.id }}
-                      className="relative block aspect-square overflow-hidden rounded-md bg-secondary"
+                      className="group relative block aspect-square overflow-hidden rounded-md bg-secondary"
                     >
                       <img
                         src={
@@ -305,11 +307,30 @@ function ProfilePage() {
                         }
                         alt={post.caption.slice(0, 80) || `Repost by ${user.username}`}
                         loading="lazy"
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       {post.media[0]?.resourceType === "video" && (
-                        <Play className="absolute right-2 top-2 h-4 w-4 text-white" aria-hidden="true" />
+                        <Play className="absolute right-2 top-2 h-4 w-4 text-white drop-shadow" aria-hidden="true" />
                       )}
+                      {/* Hover Stats Overlay with Upload Timestamp */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100 p-2">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1 text-xs font-semibold">
+                            <Heart className="h-4 w-4 fill-white" />
+                            {compact(post.likeCount)}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs font-semibold">
+                            <MessageCircle className="h-4 w-4 fill-white" />
+                            {compact(post.commentCount)}
+                          </span>
+                        </div>
+                        {toDate(post.createdAt) && (
+                          <RelativeTime
+                            date={toDate(post.createdAt)}
+                            className="text-[10px] text-white/90 font-medium"
+                          />
+                        )}
+                      </div>
                     </Link>
                   </li>
                 ))}
@@ -336,7 +357,7 @@ function ProfilePage() {
                     <Link
                       to="/post/$postId"
                       params={{ postId: post.id }}
-                      className="relative block aspect-square overflow-hidden rounded-md bg-secondary"
+                      className="group relative block aspect-square overflow-hidden rounded-md bg-secondary"
                     >
                       <img
                         src={
@@ -346,11 +367,30 @@ function ProfilePage() {
                         }
                         alt={post.caption.slice(0, 80) || `Post by ${user.username}`}
                         loading="lazy"
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       {post.media[0]?.resourceType === "video" && (
-                        <Play className="absolute right-2 top-2 h-4 w-4 text-white" aria-hidden="true" />
+                        <Play className="absolute right-2 top-2 h-4 w-4 text-white drop-shadow" aria-hidden="true" />
                       )}
+                      {/* Hover Stats Overlay with Upload Timestamp */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100 p-2">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1 text-xs font-semibold">
+                            <Heart className="h-4 w-4 fill-white" />
+                            {compact(post.likeCount)}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs font-semibold">
+                            <MessageCircle className="h-4 w-4 fill-white" />
+                            {compact(post.commentCount)}
+                          </span>
+                        </div>
+                        {toDate(post.createdAt) && (
+                          <RelativeTime
+                            date={toDate(post.createdAt)}
+                            className="text-[10px] text-white/90 font-medium"
+                          />
+                        )}
+                      </div>
                     </Link>
                   </li>
                 ))}

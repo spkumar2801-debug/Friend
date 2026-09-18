@@ -60,18 +60,50 @@ export function tokenize(text: string): Token[] {
 }
 
 export function timeAgo(date: Date | null | undefined): string {
-  if (!date) return "now";
-  const s = Math.max(1, Math.floor((Date.now() - date.getTime()) / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  if (d < 7) return `${d}d`;
-  const w = Math.floor(d / 7);
-  if (w < 5) return `${w}w`;
-  return `${Math.floor(d / 30)}mo`;
+  if (!date) return "Just now";
+  const diffSec = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+
+  // If under 1 minute or just uploaded
+  if (diffSec < 60) return "Just now";
+
+  const mins = Math.floor(diffSec / 60);
+  if (mins < 60) {
+    return mins === 1 ? "1 min ago" : `${mins} mins ago`;
+  }
+
+  const hours = Math.floor(diffSec / 3600);
+  if (hours < 24) {
+    return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+  }
+
+  const days = Math.floor(diffSec / 86400);
+  if (days <= 7) {
+    return days === 1 ? "1 day ago" : `${days} days ago`;
+  }
+
+  // More than 7 days ago: mention the date (e.g. "Sep 10" or "Sep 10, 2025")
+  const now = new Date();
+  const isSameYear = date.getFullYear() === now.getFullYear();
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(isSameYear ? {} : { year: "numeric" }),
+  });
+}
+
+export function formatFullDate(date: Date | null | undefined): string {
+  if (!date) return "";
+  try {
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return date.toLocaleString();
+  }
 }
 
 export function compact(n: number): string {

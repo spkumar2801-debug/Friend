@@ -56,14 +56,19 @@ function CreatePage() {
     }
     setPublishing(true);
     try {
+      const isVideo = media.some((m) => m.resourceType === "video");
       if (isStory) {
         await createStory(profile, media[0]!);
         toast.success("Story shared — it disappears in 24 hours");
         navigate({ to: "/home" });
       } else {
         const id = await createPost({ author: profile, media, caption, location: location || null });
-        toast.success("Post published");
-        navigate({ to: "/post/$postId", params: { postId: id } });
+        toast.success(isVideo ? "Reel published" : "Post published");
+        if (isVideo) {
+          navigate({ to: "/explore", search: { reelId: id } });
+        } else {
+          navigate({ to: "/post/$postId", params: { postId: id } });
+        }
       }
     } catch (e) {
       toast.error(friendlyError(e));
@@ -128,6 +133,8 @@ function CreatePage() {
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : isStory ? (
               "Share story"
+            ) : media.some((m) => m.resourceType === "video") ? (
+              "Publish reel"
             ) : (
               "Publish post"
             )}

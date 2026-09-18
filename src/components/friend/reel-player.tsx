@@ -25,6 +25,7 @@ import { UserAvatar } from "./user-avatar";
 import { FollowButton } from "./follow-button";
 import { ResponsiveModal } from "./responsive-modal";
 import { CommentsPanel } from "./comments-panel";
+import { RelativeTime } from "./relative-time";
 import { RichText } from "./rich-text";
 import { useAuth } from "@/context/auth";
 import {
@@ -37,9 +38,10 @@ import {
   toggleRepost,
   toggleSave,
   updatePostCaption,
+  toDate,
 } from "@/lib/services";
 import { friendlyError } from "@/lib/errors";
-import { compact } from "@/lib/text";
+import { compact, timeAgo, formatFullDate } from "@/lib/text";
 import { img } from "@/lib/cloudinary";
 import { cn } from "@/lib/utils";
 import type { Post } from "@/types";
@@ -420,6 +422,9 @@ function ReelSlide({ post, isActive, isMuted, onToggleMute, onDeleted }: ReelIte
               {authorData.username || post.author.username}
             </span>
           </Link>
+          <span className="text-xs text-white/80 font-medium drop-shadow-sm shrink-0 flex items-center gap-1">
+            • <RelativeTime date={toDate(post.createdAt)} />
+          </span>
           {profile?.uid !== post.authorId && (
             <FollowButton
               target={{
@@ -489,6 +494,11 @@ function ReelSlide({ post, isActive, isMuted, onToggleMute, onDeleted }: ReelIte
       {/* Reel Options Modal (Three dots) */}
       <ResponsiveModal open={showOptions} onOpenChange={setShowOptions} title="Reel options">
         <div className="flex flex-col gap-1 pb-2">
+          {toDate(post.createdAt) && (
+            <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border/60 mb-1">
+              <RelativeTime date={toDate(post.createdAt)} prefix="Uploaded " /> · {formatFullDate(toDate(post.createdAt))}
+            </div>
+          )}
           <Button variant="ghost" className="justify-start" onClick={() => { share(); setShowOptions(false); }}>
             <Link2 className="mr-2 h-4 w-4" aria-hidden="true" /> Copy link
           </Button>

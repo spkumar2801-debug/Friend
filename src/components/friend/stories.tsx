@@ -8,6 +8,7 @@ import { timeAgo } from "@/lib/text";
 import type { Story } from "@/types";
 import { UserAvatar } from "./user-avatar";
 import { MediaItem } from "./post-media";
+import { RelativeTime } from "./relative-time";
 import { cn } from "@/lib/utils";
 
 interface Group {
@@ -185,7 +186,7 @@ function StoryViewer({ group, onClose }: { group: Group; onClose: () => void }) 
         <UserAvatar photoURL={group.photoURL} name={group.displayName} size={34} />
         <div className="min-w-0 flex-1 text-sm">
           <p className="truncate font-semibold">{group.username}</p>
-          <p className="text-xs text-white/70">{timeAgo(toDate(story.createdAt))} ago</p>
+          <RelativeTime date={toDate(story.createdAt)} className="text-xs text-white/70 block" />
         </div>
         {profile?.uid === group.authorId && (
           <button type="button" onClick={remove} aria-label="Delete this story" className="p-2">

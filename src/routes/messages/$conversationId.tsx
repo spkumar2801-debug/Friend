@@ -22,6 +22,7 @@ import { Progress } from "@/components/ui/progress";
 import { AppShell } from "@/components/friend/app-shell";
 import { UserAvatar } from "@/components/friend/user-avatar";
 import { CameraModal } from "@/components/friend/camera-modal";
+import { RelativeTime } from "@/components/friend/relative-time";
 import { useAuth } from "@/context/auth";
 import { getDb } from "@/lib/firebase";
 import { markConversationRead, sendMessage, toDate, watchMessages } from "@/lib/services";
@@ -362,13 +363,12 @@ function ConversationPage() {
                   {message.text && (
                     <p className="whitespace-pre-wrap break-words">{message.text}</p>
                   )}
-                  <p
-                    className={`text-[10px] text-right ${
+                  <RelativeTime
+                    date={toDate(message.createdAt)}
+                    className={`block text-[10px] text-right ${
                       mine ? "text-primary-foreground/70" : "text-muted-foreground"
                     }`}
-                  >
-                    {timeAgo(toDate(message.createdAt))}
-                  </p>
+                  />
                 </div>
               </div>
             );

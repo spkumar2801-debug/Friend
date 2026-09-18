@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AppShell } from "@/components/friend/app-shell";
 import { UserAvatar } from "@/components/friend/user-avatar";
 import { EmptyState, RowSkeleton } from "@/components/friend/states";
+import { RelativeTime } from "@/components/friend/relative-time";
 import { useAuth } from "@/context/auth";
 import { openConversation, searchUsers, toDate, watchConversations } from "@/lib/services";
 import { friendlyError } from "@/lib/errors";
@@ -137,9 +138,10 @@ function MessagesPage() {
                       <span className="truncate text-sm font-semibold">
                         {other?.username ?? "Friend"}
                       </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {timeAgo(toDate(conversation.updatedAt))}
-                      </span>
+                      <RelativeTime
+                        date={toDate(conversation.updatedAt)}
+                        className="shrink-0 text-xs text-muted-foreground"
+                      />
                     </span>
                     <span
                       className={`block truncate text-sm ${unread ? "font-semibold" : "text-muted-foreground"}`}

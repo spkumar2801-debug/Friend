@@ -19,6 +19,7 @@ import {
   where,
   writeBatch,
   Timestamp,
+  FieldValue,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
@@ -83,17 +84,60 @@ export const defaultSettings: UserSettings = {
 };
 
 export function toDate(ts: unknown): Date | null {
+  if (!ts) return null;
+  if (ts instanceof Date) return isNaN(ts.getTime()) ? null : ts;
   if (ts instanceof Timestamp) return ts.toDate();
+  if (typeof (ts as { toDate?: () => unknown }).toDate === "function") {
+    try {
+      const res = (ts as { toDate: () => unknown }).toDate();
+      if (res instanceof Date && !isNaN(res.getTime())) return res;
+    } catch {
+      // ignore
+    }
+  }
+  if (typeof (ts as { toMillis?: () => unknown }).toMillis === "function") {
+    try {
+      const ms = (ts as { toMillis: () => unknown }).toMillis();
+      if (typeof ms === "number" && !isNaN(ms)) return new Date(ms);
+    } catch {
+      // ignore
+    }
+  }
+  if (typeof ts === "object" && ts !== null) {
+    const obj = ts as Record<string, unknown>;
+    if ("_methodName" in obj) {
+      return null;
+    }
+    const sec = typeof obj["seconds"] === "number" ? obj["seconds"] : typeof obj["_seconds"] === "number" ? obj["_seconds"] : null;
+    const nanosec = typeof obj["nanoseconds"] === "number" ? obj["nanoseconds"] : typeof obj["_nanoseconds"] === "number" ? obj["_nanoseconds"] : 0;
+    if (sec !== null) {
+      return new Date(sec * 1000 + nanosec / 1e6);
+    }
+  }
+  if (typeof ts === "number") {
+    const d = new Date(ts);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (typeof ts === "string") {
+    const d = new Date(ts);
+    if (!isNaN(d.getTime())) return d;
+  }
   return null;
 }
 
-/** Deeply removes undefined properties so Firestore never throws unsupported field value error. */
+/** Deeply removes undefined properties while safely preserving Firestore FieldValues (serverTimestamp, increment, etc.) and Timestamps. */
 export function sanitizeForFirestore<T>(data: T): T {
   if (data === null || data === undefined) return null as unknown as T;
+  if (data instanceof FieldValue) return data;
+  if (data instanceof Timestamp || data instanceof Date) return data;
   if (Array.isArray(data)) {
     return data.map((item) => sanitizeForFirestore(item)) as unknown as T;
   }
-  if (typeof data === "object" && !(data instanceof Date) && !(data instanceof Timestamp)) {
+  if (typeof data === "object") {
+    // Preserve Firestore sentinel objects like serverTimestamp() and increment()
+    if ("_methodName" in (data as Record<string, unknown>)) {
+      return data;
+    }
     const cleaned: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
       if (value !== undefined) {
@@ -352,7 +396,50 @@ export async function removeFollower(ownerId: string, followerId: string) {
 
 /* ------------------------------------------------------------------ posts */
 
-const postFrom = (d: QueryDocumentSnapshot<DocumentData>) => ({ id: d.id, ...d.data() }) as Post;
+function extractMediaTimestamp(data: DocumentData): Date | null {
+  const mediaList = Array.isArray(data.media) ? data.media : [];
+  for (const m of mediaList) {
+    if (m && typeof m.url === "string") {
+      const match = m.url.match(/\/v(\d{9,12})\//);
+      if (match && match[1]) {
+        const sec = parseInt(match[1], 10);
+        if (!isNaN(sec) && sec > 1000000000) {
+          return new Date(sec * 1000);
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function resolvePostCreatedAt(data: DocumentData): Timestamp | Date | null {
+  if (data.createdAt) {
+    if (typeof data.createdAt === "object" && "_methodName" in data.createdAt) {
+      if (typeof data.clientCreatedAt === "number") {
+        return new Date(data.clientCreatedAt);
+      }
+      const mediaDate = extractMediaTimestamp(data);
+      if (mediaDate) return mediaDate;
+      return null;
+    }
+    return data.createdAt;
+  }
+  if (typeof data.clientCreatedAt === "number") {
+    return new Date(data.clientCreatedAt);
+  }
+  const mediaDate = extractMediaTimestamp(data);
+  if (mediaDate) return mediaDate;
+  return null;
+}
+
+const postFrom = (d: QueryDocumentSnapshot<DocumentData>) => {
+  const data = d.data({ serverTimestamps: "estimate" });
+  return {
+    id: d.id,
+    ...data,
+    createdAt: resolvePostCreatedAt(data),
+  } as Post;
+};
 
 export async function createPost(params: {
   author: UserProfile;
@@ -390,6 +477,7 @@ export async function createPost(params: {
     isPrivate: Boolean(params.author.isPrivate),
     moderationStatus: "approved",
     createdAt: serverTimestamp(),
+    clientCreatedAt: Date.now(),
   });
 
   const ref = await addDoc(collection(db, "posts"), postData);
@@ -433,7 +521,13 @@ export async function updatePostCaption(postId: string, caption: string) {
 
 export async function getPost(id: string): Promise<Post | null> {
   const snap = await getDoc(doc(getDb(), "posts", id));
-  return snap.exists() ? ({ id: snap.id, ...snap.data() } as Post) : null;
+  if (!snap.exists()) return null;
+  const data = snap.data({ serverTimestamps: "estimate" });
+  return {
+    id: snap.id,
+    ...data,
+    createdAt: resolvePostCreatedAt(data),
+  } as Post;
 }
 
 export async function feedPage(uid: string, ids: string[], cursor: Cursor, size = 6): Promise<Page<Post>> {
@@ -533,6 +627,7 @@ export async function addComment(params: {
       parentId: params.parentId ?? null,
       likeCount: 0,
       createdAt: serverTimestamp(),
+      clientCreatedAt: Date.now(),
     }),
   );
   await updateDoc(doc(db, "posts", params.post.id), { commentCount: increment(1) });
@@ -668,6 +763,7 @@ export async function createStory(author: UserProfile, media: PostMedia) {
     media: cleanMedia,
     viewers: [],
     createdAt: serverTimestamp(),
+    clientCreatedAt: Date.now(),
     expiresAt,
   }));
 }

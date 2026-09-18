@@ -12,10 +12,11 @@ import { UserAvatar } from "@/components/friend/user-avatar";
 import { RichText } from "@/components/friend/rich-text";
 import { ResponsiveModal } from "@/components/friend/responsive-modal";
 import { ErrorState, PostSkeleton } from "@/components/friend/states";
+import { RelativeTime } from "@/components/friend/relative-time";
 import { useAuth } from "@/context/auth";
 import { deletePost, getPost, getProfile, reportContent, toDate, updatePostCaption } from "@/lib/services";
 import { friendlyError } from "@/lib/errors";
-import { timeAgo } from "@/lib/text";
+import { timeAgo, formatFullDate } from "@/lib/text";
 import type { Post } from "@/types";
 
 export const Route = createFileRoute("/post/$postId")({
@@ -219,7 +220,7 @@ function PostDetail() {
                       </Link>
                       <p className="text-xs text-muted-foreground">
                         {post.location ? `${post.location} · ` : ""}
-                        {timeAgo(toDate(post.createdAt))}
+                        <RelativeTime date={toDate(post.createdAt)} />
                       </p>
                     </div>
                   </div>
@@ -249,6 +250,12 @@ function PostDetail() {
                     </p>
                   )}
                   <CommentsPanel post={post} />
+                  {toDate(post.createdAt) && (
+                    <RelativeTime
+                      date={toDate(post.createdAt)}
+                      className="block pt-3 text-[11px] font-medium tracking-wide text-muted-foreground uppercase border-t border-border mt-3"
+                    />
+                  )}
                 </div>
               </>
             );

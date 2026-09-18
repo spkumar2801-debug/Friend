@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/friend/app-shell";
 import { UserAvatar } from "@/components/friend/user-avatar";
 import { EmptyState, RowSkeleton } from "@/components/friend/states";
+import { RelativeTime } from "@/components/friend/relative-time";
 import { useAuth } from "@/context/auth";
 import {
   getProfiles,
@@ -145,9 +146,10 @@ function NotificationsPage() {
                   <span className="font-semibold">{item.actor.username}</span>{" "}
                   {label[item.type]}
                   {item.preview ? <span className="text-muted-foreground"> · {item.preview}</span> : null}
-                  <span className="ml-1 text-xs text-muted-foreground">
-                    {timeAgo(toDate(item.createdAt))}
-                  </span>
+                  <RelativeTime
+                    date={toDate(item.createdAt)}
+                    className="ml-1 text-xs text-muted-foreground"
+                  />
                 </span>
                 {!item.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
               </span>

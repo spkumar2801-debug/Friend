@@ -32,13 +32,14 @@ import {
   updatePostCaption,
 } from "@/lib/services";
 import { friendlyError } from "@/lib/errors";
-import { compact, timeAgo } from "@/lib/text";
+import { compact, timeAgo, formatFullDate } from "@/lib/text";
 import type { Post } from "@/types";
 import { UserAvatar } from "./user-avatar";
 import { MediaCarousel } from "./post-media";
 import { RichText } from "./rich-text";
 import { ResponsiveModal } from "./responsive-modal";
 import { CommentsPanel } from "./comments-panel";
+import { RelativeTime } from "./relative-time";
 import { cn } from "@/lib/utils";
 
 export function PostCard({ post, onDeleted }: { post: Post; onDeleted?: (id: string) => void }) {
@@ -237,7 +238,7 @@ export function PostCard({ post, onDeleted }: { post: Post; onDeleted?: (id: str
           </Link>
           <p className="truncate text-xs text-muted-foreground">
             {post.location ? `${post.location} · ` : ""}
-            {timeAgo(toDate(post.createdAt))}
+            <RelativeTime date={toDate(post.createdAt)} />
           </p>
         </div>
         <button
@@ -369,6 +370,12 @@ export function PostCard({ post, onDeleted }: { post: Post; onDeleted?: (id: str
           >
             View all {commentCount} comments
           </button>
+        )}
+        {toDate(post.createdAt) && (
+          <RelativeTime
+            date={toDate(post.createdAt)}
+            className="block text-[10px] font-medium tracking-wide text-muted-foreground uppercase pt-0.5"
+          />
         )}
       </div>
 

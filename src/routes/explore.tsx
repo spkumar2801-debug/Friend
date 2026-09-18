@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { Clapperboard, Grid3x3, Play, Smartphone } from "lucide-react";
+import { Clapperboard, Grid3x3, Heart, MessageCircle, Play, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppShell } from "@/components/friend/app-shell";
 import { UserAvatar } from "@/components/friend/user-avatar";
 import { FollowButton } from "@/components/friend/follow-button";
 import { EmptyState, ErrorState, GridSkeleton } from "@/components/friend/states";
 import { ReelPlayer } from "@/components/friend/reel-player";
+import { RelativeTime } from "@/components/friend/relative-time";
 import { useAuth } from "@/context/auth";
-import { discoverPage, followingIds, getPost, suggestedUsers, type Cursor } from "@/lib/services";
+import { discoverPage, followingIds, getPost, suggestedUsers, toDate, type Cursor } from "@/lib/services";
 import { friendlyError } from "@/lib/errors";
 import { img } from "@/lib/cloudinary";
+import { compact } from "@/lib/text";
 import type { Post, UserProfile } from "@/types";
 
 interface ExploreSearchParams {
@@ -226,7 +228,7 @@ function ExplorePage() {
                 <Link
                   to="/post/$postId"
                   params={{ postId: post.id }}
-                  className="relative block aspect-square overflow-hidden rounded-md bg-secondary"
+                  className="group relative block aspect-square overflow-hidden rounded-md bg-secondary"
                 >
                   {post.media[0]?.resourceType === "video" ? (
                     <>
@@ -234,18 +236,37 @@ function ExplorePage() {
                         src={img.poster(post.media[0]?.url)}
                         alt={post.caption.slice(0, 80) || `Reel by ${post.author.username}`}
                         loading="lazy"
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
-                      <Play className="absolute right-2 top-2 h-4 w-4 text-white" aria-hidden="true" />
+                      <Play className="absolute right-2 top-2 h-4 w-4 text-white drop-shadow" aria-hidden="true" />
                     </>
                   ) : (
                     <img
                       src={img.thumb(post.media[0]?.url)}
                       alt={post.caption.slice(0, 80) || `Post by ${post.author.username}`}
                       loading="lazy"
-                      className="h-full w-full object-cover transition-transform hover:scale-[1.03]"
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   )}
+                  {/* Hover Stats Overlay with Upload Timestamp */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100 p-2">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1 text-xs font-semibold">
+                        <Heart className="h-4 w-4 fill-white" />
+                        {compact(post.likeCount)}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs font-semibold">
+                        <MessageCircle className="h-4 w-4 fill-white" />
+                        {compact(post.commentCount)}
+                      </span>
+                    </div>
+                    {toDate(post.createdAt) && (
+                      <RelativeTime
+                        date={toDate(post.createdAt)}
+                        className="text-[10px] text-white/90 font-medium"
+                      />
+                    )}
+                  </div>
                 </Link>
               </li>
             ))}

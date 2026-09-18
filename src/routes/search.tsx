@@ -18,9 +18,10 @@ import { AppShell } from "@/components/friend/app-shell";
 import { UserAvatar } from "@/components/friend/user-avatar";
 import { FollowButton } from "@/components/friend/follow-button";
 import { EmptyState, GridSkeleton, RowSkeleton } from "@/components/friend/states";
-import { discoverPage, hashtagPosts, searchUsers, type Cursor } from "@/lib/services";
+import { RelativeTime } from "@/components/friend/relative-time";
+import { discoverPage, hashtagPosts, searchUsers, toDate, type Cursor } from "@/lib/services";
 import { friendlyError } from "@/lib/errors";
-import { extractHashtags, compact } from "@/lib/text";
+import { extractHashtags, compact, timeAgo, formatFullDate } from "@/lib/text";
 import { img } from "@/lib/cloudinary";
 import type { Post, UserProfile } from "@/types";
 
@@ -353,15 +354,23 @@ function SearchPage() {
                       )}
 
                       {/* Instagram Hover Stats Overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center gap-4 bg-black/45 text-white opacity-0 transition-opacity group-hover:opacity-100">
-                        <span className="flex items-center gap-1 text-xs font-semibold">
-                          <Heart className="h-4 w-4 fill-white" />
-                          {compact(post.likeCount)}
-                        </span>
-                        <span className="flex items-center gap-1 text-xs font-semibold">
-                          <MessageCircle className="h-4 w-4 fill-white" />
-                          {compact(post.commentCount)}
-                        </span>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100 p-2">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1 text-xs font-semibold">
+                            <Heart className="h-4 w-4 fill-white" />
+                            {compact(post.likeCount)}
+                          </span>
+                          <span className="flex items-center gap-1 text-xs font-semibold">
+                            <MessageCircle className="h-4 w-4 fill-white" />
+                            {compact(post.commentCount)}
+                          </span>
+                        </div>
+                        {toDate(post.createdAt) && (
+                          <RelativeTime
+                            date={toDate(post.createdAt)}
+                            className="text-[10px] text-white/90 font-medium"
+                          />
+                        )}
                       </div>
                     </Link>
                   </li>

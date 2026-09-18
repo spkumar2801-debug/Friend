@@ -18,6 +18,7 @@ import { timeAgo } from "@/lib/text";
 import type { Comment, Post } from "@/types";
 import { UserAvatar } from "./user-avatar";
 import { RichText } from "./rich-text";
+import { RelativeTime } from "./relative-time";
 import { EmptyState, RowSkeleton } from "./states";
 
 export function CommentsPanel({
@@ -152,7 +153,7 @@ export function CommentsPanel({
             <RichText text={comment.text} />
           </p>
           <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{timeAgo(toDate(comment.createdAt))}</span>
+            <RelativeTime date={toDate(comment.createdAt)} />
             {comment.likeCount > 0 && <span>{comment.likeCount} likes</span>}
             {!isReply && (
               <button type="button" className="hover:text-foreground" onClick={() => setReplyTo(comment)}>
